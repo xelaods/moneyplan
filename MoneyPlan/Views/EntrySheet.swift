@@ -116,7 +116,7 @@ struct EntrySheet: View {
     }
 
     private var categoryGrid: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 8)], spacing: 8) {
+        FlowLayout(spacing: 8) {
             ForEach(categories) { c in
                 Button {
                     UISelectionFeedbackGenerator().selectionChanged()
@@ -124,7 +124,6 @@ struct EntrySheet: View {
                     categoryPicked = true
                 } label: {
                     CategoryChip(category: c, selected: c.id == txn.categoryID)
-                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }
@@ -300,5 +299,55 @@ struct Keypad: View {
                 .brightness(configuration.isPressed ? -0.04 : 0)
                 .animation(.snappy(duration: 0.12), value: configuration.isPressed)
         }
+    }
+}
+
+/// 中身の幅のまま、入りきらなければ次の行に折り返して並べる
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let height = rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(0, rows.count - 1))
+        let width = rows.map(\.width).max() ?? 0
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            // 行ごとに中央揃え
+            var x = bounds.minX + (bounds.width - row.width) / 2
+            for i in row.indices {
+                let size = subviews[i].sizeThatFits(.unspecified)
+                subviews[i].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = []
+        var row = Row()
+        for i in subviews.indices {
+            let size = subviews[i].sizeThatFits(.unspecified)
+            let next = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            if next > width && !row.indices.isEmpty {
+                rows.append(row)
+                row = Row()
+            }
+            row.width = row.indices.isEmpty ? size.width : row.width + spacing + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(i)
+        }
+        if !row.indices.isEmpty { rows.append(row) }
+        return rows
     }
 }

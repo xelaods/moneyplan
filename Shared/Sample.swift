@@ -8,11 +8,11 @@ enum Sample {
         ("スターバックス 流山おおたかの森", "cafe", 480...780, "Apple Pay"),
         ("モバイルSuica", "transport", 1000...3000, "Suica"),
         ("すき家", "food", 450...890, "Apple Pay"),
-        ("マツモトキヨシ", "daily", 300...2400, "Apple Pay"),
+        ("マツモトキヨシ", "daily", 300...1400, "Apple Pay"),
         ("ダイソー", "daily", 110...880, "Apple Pay"),
         ("紀伊國屋書店", "study", 900...2600, "Apple Pay"),
         ("ラウンドワン", "hobby", 900...3200, "Apple Pay"),
-        ("UNIQLO", "fashion", 1990...5990, "Apple Pay"),
+        ("UNIQLO", "fashion", 990...2990, "Apple Pay"),
         ("大学生協", "food", 380...720, "Apple Pay")
     ]
 
@@ -28,7 +28,7 @@ enum Sample {
         var txns: [Txn] = []
         for back in 0..<75 {
             let day = today.adding(days: -back)
-            let count = rand(0...3)
+            let count = rand(0...2)
             for i in 0..<count {
                 let shop = shops[rand(0...(shops.count - 1))]
                 var amount = rand(shop.2)
