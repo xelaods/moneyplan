@@ -1,0 +1,105 @@
+name: MoneyPlan
+
+options:
+  bundleIdPrefix: app.moneyplan
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_LANGUAGE: ja
+
+targets:
+  MoneyPlan:
+    type: application
+    platform: iOS
+    sources:
+      - path: MoneyPlan
+        excludes:
+          - "**/*.entitlements"
+      - path: Shared
+    dependencies:
+      - target: MoneyPlanWidget
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: MoneyPlan/MoneyPlan.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: MoneyPlan/Info.plist
+      properties:
+        CFBundleDisplayName: MoneyPlan
+        CFBundleDevelopmentRegion: ja
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        AppGroupID: $(APP_GROUP_ID)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        NSCalendarsFullAccessUsageDescription: ウィジェットに今月の支出を表示するため、カレンダーの2001年1月2日に集計メモを1件だけ保存します。ほかの予定を読んだり書き換えたりはしません。
+        NSCalendarsUsageDescription: ウィジェットに今月の支出を表示するため、カレンダーに集計メモを1件だけ保存します。
+        CFBundleURLTypes:
+          - CFBundleURLName: app.moneyplan.open
+            CFBundleURLSchemes:
+              - moneyplan
+
+  MoneyPlanWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MoneyPlanWidget
+        excludes:
+          - "**/*.entitlements"
+      - path: Shared
+    configFiles:
+      Debug: Config/Widget.xcconfig
+      Release: Config/Widget.xcconfig
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: MoneyPlanWidget/MoneyPlanWidget.entitlements
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    info:
+      path: MoneyPlanWidget/Info.plist
+      properties:
+        CFBundleDisplayName: MoneyPlan
+        CFBundleDevelopmentRegion: ja
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        AppGroupID: $(APP_GROUP_ID)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSCalendarsFullAccessUsageDescription: アプリが保存した今月の集計メモを読み込んで表示します。
+
+  MoneyPlanTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MoneyPlanTests
+    dependencies:
+      - target: MoneyPlan
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  MoneyPlan:
+    build:
+      targets:
+        MoneyPlan: all
+        MoneyPlanWidget: all
+    test:
+      targets:
+        - MoneyPlanTests
