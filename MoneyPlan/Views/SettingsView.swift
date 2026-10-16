@@ -120,6 +120,15 @@ struct SettingsView: View {
                 }
             }
             NavigationLink {
+                IntentLogView()
+            } label: {
+                LabeledContent {
+                    Text("\(IntentLog.all().count)件")
+                } label: {
+                    Label("ショートカットから受け取った内容", systemImage: "list.bullet.clipboard")
+                }
+            }
+            NavigationLink {
                 NoticeImportView()
             } label: {
                 Label("銀行の通知文から記録", systemImage: "building.columns")
@@ -358,5 +367,59 @@ struct LearnedView: View {
         .background(Theme.paper.ignoresSafeArea())
         .navigationTitle("覚えた分類")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - ショートカットの受信ログ
+
+struct IntentLogView: View {
+    @State private var entries = IntentLog.all()
+
+    var body: some View {
+        List {
+            if entries.isEmpty {
+                EmptyNote(symbol: "tray", title: "まだ何も届いていません",
+                          message: "Apple Pay で払ってもここに何も出ないときは、オートメーションが動いていません。ショートカットアプリの「オートメーション」で、カードと「すぐに実行」を確認してください。")
+                    .listRowBackground(Color.clear)
+            }
+            ForEach(entries) { e in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(Fmt.full(e.date)) \(Fmt.time(e.date))")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.muted)
+                    row("金額", e.amount)
+                    row("店名", e.merchant)
+                    row("カード", e.card)
+                    Text(e.result)
+                        .font(.system(size: 12))
+                        .foregroundStyle(e.result.contains("0円") ? Theme.accent : Theme.income)
+                }
+                .padding(.vertical, 4)
+                .textSelection(.enabled)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Theme.paper.ignoresSafeArea())
+        .navigationTitle("受け取った内容")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !entries.isEmpty {
+                Button("消去") { IntentLog.clear(); entries = [] }
+            }
+        }
+        .refreshable { entries = IntentLog.all() }
+    }
+
+    private func row(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.muted)
+                .frame(width: 48, alignment: .leading)
+            Text(value.isEmpty ? "（空）" : value)
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundStyle(value.isEmpty ? Theme.accent : Theme.ink)
+                .lineLimit(4)
+        }
     }
 }

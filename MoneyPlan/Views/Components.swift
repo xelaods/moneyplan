@@ -34,10 +34,19 @@ struct TxnRow: View {
                 .lineLimit(1)
             }
             Spacer(minLength: 8)
-            Text(txn.kind == .income ? "+\(Fmt.yen(txn.amount))" : Fmt.yen(txn.amount))
-                .font(Theme.number(19, weight: .bold))
-                .foregroundStyle(txn.kind == .income ? Theme.income : Theme.ink)
-                .monospacedDigit()
+            if txn.needsAmount {
+                Text("金額を入力")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Theme.onAccent)
+                    .padding(.horizontal, 9)
+                    .frame(height: 24)
+                    .background(Theme.accent, in: Capsule())
+            } else {
+                Text(txn.kind == .income ? "+\(Fmt.yen(txn.amount))" : Fmt.yen(txn.amount))
+                    .font(Theme.number(19, weight: .bold))
+                    .foregroundStyle(txn.kind == .income ? Theme.income : Theme.ink)
+                    .monospacedDigit()
+            }
         }
         .contentShape(Rectangle())
     }

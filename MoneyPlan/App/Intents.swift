@@ -2,12 +2,10 @@ import AppIntents
 import Foundation
 
 enum RecordError: Error, CustomLocalizedStringResourceConvertible {
-    case noAmount(String)
     case noNotice
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
-        case .noAmount(let s): return "金額を読み取れませんでした（\(s)）"
         case .noNotice: return "文章から金額を見つけられませんでした"
         }
     }
@@ -20,7 +18,7 @@ struct RecordPaymentIntent: AppIntent {
     static var openAppWhenRun = false
 
     @Parameter(title: "金額", description: "「¥1,234」「1234」など。記号やカンマがあっても読み取ります")
-    var amount: String
+    var amount: String?
 
     @Parameter(title: "店名")
     var merchant: String?
@@ -40,24 +38,64 @@ struct RecordPaymentIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
-        guard let yen = AmountParser.parse(amount), yen > 0 else { throw RecordError.noAmount(amount) }
+        let raw = (amount ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // 金額が届かないカードもあるので、読み取れなくても 0 円で記録して、あとでアプリで入れられるようにする
+        let yen = AmountParser.parse(raw) ?? 0
         let store = Store.shared
         let kind: TxnKind = isIncome ? .income : .expense
-        let name = (merchant ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = Self.clean(merchant)
+        let account = Self.clean(card)
         let t = store.add(Txn(date: Date(), amount: yen, kind: kind, merchant: name,
                               categoryID: store.suggestCategory(for: name, kind: kind),
-                              account: (card ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                              source: .applePay))
+                              account: account, source: .applePay))
         let c = store.category(t.categoryID)
-        let l = store.ledger
         let line: String
-        if kind == .expense && l.budget.monthly > 0 {
-            line = "\(Fmt.yen(yen))（\(c.name)）を記録しました。今月の残り \(Fmt.yen(l.remaining))"
+        if yen == 0 {
+            line = "金額が届かなかったので、0円で記録しました。MoneyPlan で金額を入れてください"
+        } else if kind == .expense && store.ledger.budget.monthly > 0 {
+            line = "\(Fmt.yen(yen))（\(c.name)）を記録しました。今月の残り \(Fmt.yen(store.ledger.remaining))"
         } else {
             line = "\(Fmt.yen(yen))（\(c.name)）を記録しました"
         }
+        IntentLog.add(amount: raw, merchant: merchant ?? "", card: card ?? "", result: line)
         return .result(value: line, dialog: IntentDialog(stringLiteral: line))
     }
+
+    /// ショートカットから渡ってきた文字を整える（改行や長すぎる文字を切る）
+    static func clean(_ s: String?) -> String {
+        let first = (s ?? "").components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }.first { !$0.isEmpty } ?? ""
+        return String(first.prefix(40))
+    }
+}
+
+/// ショートカットから受け取った内容の記録（うまく記録されないときの確認用。新しい順に20件）
+enum IntentLog {
+    struct Entry: Codable, Identifiable {
+        var id = UUID()
+        var date: Date
+        var amount: String
+        var merchant: String
+        var card: String
+        var result: String
+    }
+
+    private static let key = "intentLog.v1"
+
+    static func all() -> [Entry] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let list = try? SharedStore.decoder.decode([Entry].self, from: data) else { return [] }
+        return list
+    }
+
+    static func add(amount: String, merchant: String, card: String, result: String) {
+        var list = all()
+        list.insert(Entry(date: Date(), amount: amount, merchant: String(merchant.prefix(200)), card: String(card.prefix(200)), result: result), at: 0)
+        if let data = try? SharedStore.encoder.encode(Array(list.prefix(20))) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func clear() { UserDefaults.standard.removeObject(forKey: key) }
 }
 
 /// 銀行やカードの通知メール・SMS の文章から記録する（共有シートやショートカットから）

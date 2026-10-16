@@ -52,6 +52,8 @@ struct Txn: Codable, Identifiable, Equatable, Hashable {
     /// 支出ならマイナス、収入ならプラス
     var signed: Int { kind == .expense ? -amount : amount }
     var day: DayKey { DayKey(date) }
+    /// 金額が届かなかった記録（あとで入力する）
+    var needsAmount: Bool { amount == 0 }
 
     init(id: UUID = UUID(), date: Date, amount: Int, kind: TxnKind = .expense, merchant: String,
          categoryID: String, account: String = "", note: String = "", source: TxnSource = .manual) {

@@ -26,7 +26,7 @@ struct EntrySheet: View {
             _categoryPicked = State(initialValue: false)
         case .edit(let t):
             _txn = State(initialValue: t)
-            _digits = State(initialValue: String(t.amount))
+            _digits = State(initialValue: t.amount > 0 ? String(t.amount) : "")
             _categoryPicked = State(initialValue: true)
         }
     }

@@ -20,6 +20,12 @@ struct HomeView: View {
                     SpendHero(ledger: l)
                         .cinematicReveal(1)
 
+                    let pending = l.txns.filter(\.needsAmount)
+                    if !pending.isEmpty {
+                        PendingCard(items: pending, ledger: l, edit: edit)
+                            .cinematicReveal(1)
+                    }
+
                     if l.txns.isEmpty {
                         SetupCard { showGuide = true }
                             .cinematicReveal(2)
@@ -286,5 +292,39 @@ struct SetupCard: View {
             .card(padding: 18)
         }
         .buttonStyle(PressableCardStyle())
+    }
+}
+
+/// 金額が届かなかった Apple Pay の記録
+struct PendingCard: View {
+    let items: [Txn]
+    let ledger: Ledger
+    let edit: (EntryTarget) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(Theme.accent)
+                Text("金額が届かなかった記録 \(items.count)件")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Theme.ink)
+            }
+            Text("カードによっては金額が渡されません。タップして金額を入れてください。")
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.muted)
+            VStack(spacing: 0) {
+                ForEach(Array(items.prefix(5).enumerated()), id: \.element.id) { i, t in
+                    if i > 0 { Divider().overlay(Theme.line).padding(.leading, 50) }
+                    Button { edit(.edit(t)) } label: {
+                        TxnRow(txn: t, category: ledger.category(t.categoryID), now: ledger.now, showsDate: true)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(PressableCardStyle())
+                }
+            }
+        }
+        .card(padding: 18)
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.accent.opacity(0.5), lineWidth: 1))
     }
 }
